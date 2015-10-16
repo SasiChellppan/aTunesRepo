@@ -36,7 +36,7 @@ import net.sourceforge.atunes.utils.language.LanguageTool;
  *
  */
 public class PlayListTableModel implements TableModel {
-	
+
 	private ArrayList<AudioFile> songs;
 	private ArrayList<TableModelListener> listeners;
 	private boolean trackVisible = true;
@@ -44,12 +44,13 @@ public class PlayListTableModel implements TableModel {
 	private boolean albumVisible = true;
 	private boolean genreVisible = true;
 	private boolean durationVisible = true;
+	private boolean locationVisible = true;
 
-	private enum PlayListColumn {FAVORITE, TRACK, TITLE, ARTIST, ALBUM, GENRE, DURATION}
-	private static PlayListColumn[] headers = {PlayListColumn.FAVORITE, PlayListColumn.TRACK, PlayListColumn.TITLE, PlayListColumn.ARTIST, PlayListColumn.ALBUM, PlayListColumn.GENRE, PlayListColumn.DURATION};
+	private enum PlayListColumn {FAVORITE, TRACK, TITLE, ARTIST, ALBUM, GENRE, DURATION, LOCATION}
+	private static PlayListColumn[] headers = {PlayListColumn.FAVORITE, PlayListColumn.TRACK, PlayListColumn.TITLE, PlayListColumn.ARTIST, PlayListColumn.ALBUM, PlayListColumn.GENRE, PlayListColumn.DURATION,PlayListColumn.LOCATION};
 	private PlayListColumn[] currentHeaders;
 	private static HashMap<PlayListColumn, Class> classes;
-	
+
 	static {
 		classes = new HashMap<PlayListColumn, Class>();
 		classes.put(PlayListColumn.FAVORITE, Integer.class);
@@ -59,10 +60,11 @@ public class PlayListTableModel implements TableModel {
 		classes.put(PlayListColumn.ALBUM, String.class);
 		classes.put(PlayListColumn.GENRE, String.class);
 		classes.put(PlayListColumn.DURATION, Long.class);
+		classes.put(PlayListColumn.LOCATION, String.class);
 	}
-	
+
 	private static HashMap<PlayListColumn, String> columnNames;
-	
+
 	static {
 		columnNames = new HashMap<PlayListColumn, String>();
 		columnNames.put(PlayListColumn.FAVORITE, "");
@@ -72,14 +74,15 @@ public class PlayListTableModel implements TableModel {
 		columnNames.put(PlayListColumn.ALBUM, LanguageTool.getString("ALBUM"));
 		columnNames.put(PlayListColumn.GENRE, LanguageTool.getString("GENRE"));
 		columnNames.put(PlayListColumn.DURATION, LanguageTool.getString("DURATION"));
+		columnNames.put(PlayListColumn.LOCATION, LanguageTool.getString("LOCATION"));
 	}
-	
+
 	public PlayListTableModel() {
 		songs = new ArrayList<AudioFile>();
 		listeners = new ArrayList<TableModelListener>();
 		setCurrentHeaders();
 	}
-	
+
 	public void addTableModelListener(TableModelListener l) {
 		listeners.add(l);
 	}
@@ -88,37 +91,39 @@ public class PlayListTableModel implements TableModel {
 		int columns = getColumnCount();
 		if (columns == 0)
 			return;
-		
+
 		currentHeaders = new PlayListColumn[columns];
 
 		currentHeaders[0] = PlayListColumn.FAVORITE;
 		int c = 1;
 		if (trackVisible)
 			currentHeaders[c++] = PlayListColumn.TRACK;
-		
+
 		currentHeaders[c++] = PlayListColumn.TITLE;
 
-		if (artistVisible) 
+		if (artistVisible)
 			currentHeaders[c++] = PlayListColumn.ARTIST;
 		if (albumVisible)
 			currentHeaders[c++] = PlayListColumn.ALBUM;
 		if (genreVisible)
 			currentHeaders[c++] = PlayListColumn.GENRE;
-		currentHeaders[c] = PlayListColumn.DURATION;
+		if(durationVisible)
+			currentHeaders[c++] = PlayListColumn.DURATION;
+		currentHeaders[c] = PlayListColumn.LOCATION;
 	}
-	
+
 	private PlayListColumn getColumn(int colIndex) {
 		return currentHeaders[colIndex];
 	}
-	
+
 	public Class<?> getColumnClass(int colIndex) {
 		return classes.get(getColumn(colIndex));
 	}
 
 	public int getColumnCount() {
-		return headers.length - (trackVisible ? 0 : 1) - (artistVisible ? 0 : 1) - (albumVisible ? 0 : 1) - (genreVisible ? 0 : 1);
+		return headers.length - (trackVisible ? 0 : 1) - (artistVisible ? 0 : 1) - (albumVisible ? 0 : 1) - (genreVisible ? 0 : 1)- (durationVisible ? 0 : 1) - (locationVisible ? 0 : 1);
 	}
-	
+
 	public String getColumnName(int colIndex) {
 		return columnNames.get(getColumn(colIndex));
 	}
@@ -129,7 +134,7 @@ public class PlayListTableModel implements TableModel {
 
 	public Object getValueAt(int rowIndex, int colIndex) {
 		AudioFile file = songs.get(rowIndex);
-		
+
 		PlayListColumn c = getColumn(colIndex);
 
 		if (c == PlayListColumn.FAVORITE)
@@ -146,8 +151,11 @@ public class PlayListTableModel implements TableModel {
 			return file.getAlbum();
 		else if (c == PlayListColumn.GENRE)
 			return file.getGenre();
-		else
+		else if (c == PlayListColumn.DURATION)
 			return file.getDuration();
+		else
+			return file.getPath();
+
 	}
 
 	public boolean isCellEditable(int rowIndex, int columnIndex) {
@@ -160,64 +168,64 @@ public class PlayListTableModel implements TableModel {
 
 	public void setValueAt(Object aValue, int rowIndex, int columnIndex) {
 	}
-	
+
 	public void addSong(AudioFile song) {
 		songs.add(song);
-		
+
 		TableModelEvent event;
 		event = new TableModelEvent(this, this.getRowCount()-1, this.getRowCount()-1,
 			        TableModelEvent.ALL_COLUMNS, TableModelEvent.INSERT);
-		
+
 		for (int i = 0; i < listeners.size(); i++)
 			listeners.get(i).tableChanged(event);
 	}
-	
+
 	public void removeSongs(int[] rows) {
 		for (int i = rows.length - 1; i >= 0; i--) {
 			songs.remove(rows[i]);
 		}
-		
+
 		TableModelEvent event;
 		event = new TableModelEvent(this, TableModelEvent.ALL_COLUMNS, TableModelEvent.DELETE);
-		
+
 		for (int i = 0; i < listeners.size(); i++)
 			listeners.get(i).tableChanged(event);
 	}
 
 	public void removeSongs() {
 		songs.clear();
-		
+
 		TableModelEvent event;
 		event = new TableModelEvent(this, TableModelEvent.ALL_COLUMNS, TableModelEvent.DELETE);
-		
+
 		for (int i = 0; i < listeners.size(); i++)
 			listeners.get(i).tableChanged(event);
 	}
-	
+
 	public void moveToTop(int[] rows) {
 		for (int i = 0; i < rows.length;  i++) {
 			AudioFile aux = songs.get(rows[i]);
 			songs.remove(rows[i]);
 			songs.add(i, aux);
 		}
-		
+
 		TableModelEvent event;
 		event = new TableModelEvent(this, TableModelEvent.ALL_COLUMNS, TableModelEvent.UPDATE);
-		
+
 		for (int i = 0; i < listeners.size(); i++)
 			listeners.get(i).tableChanged(event);
 	}
-	
+
 	public void moveUp(int[] rows) {
 		for (int i = 0; i < rows.length;  i++) {
 			AudioFile aux = songs.get(rows[i]);
 			songs.remove(rows[i]);
 			songs.add(rows[i]-1, aux);
 		}
-		
+
 		TableModelEvent event;
 		event = new TableModelEvent(this, TableModelEvent.ALL_COLUMNS, TableModelEvent.UPDATE);
-		
+
 		for (int i = 0; i < listeners.size(); i++)
 			listeners.get(i).tableChanged(event);
 	}
@@ -228,10 +236,10 @@ public class PlayListTableModel implements TableModel {
 			songs.remove(rows[i]);
 			songs.add(rows[i]+1, aux);
 		}
-		
+
 		TableModelEvent event;
 		event = new TableModelEvent(this, TableModelEvent.ALL_COLUMNS, TableModelEvent.UPDATE);
-		
+
 		for (int i = 0; i < listeners.size(); i++)
 			listeners.get(i).tableChanged(event);
 	}
@@ -243,10 +251,10 @@ public class PlayListTableModel implements TableModel {
 			songs.remove(rows[i]);
 			songs.add(songs.size()-j++, aux);
 		}
-		
+
 		TableModelEvent event;
 		event = new TableModelEvent(this, TableModelEvent.ALL_COLUMNS, TableModelEvent.UPDATE);
-		
+
 		for (int i = 0; i < listeners.size(); i++)
 			listeners.get(i).tableChanged(event);
 	}
@@ -255,20 +263,20 @@ public class PlayListTableModel implements TableModel {
 		TableModelEvent event;
 		event = new TableModelEvent(this, -1, -1,
 			        TableModelEvent.ALL_COLUMNS, TableModelEvent.INSERT);
-		
+
 		for (int i = 0; i < listeners.size(); i++)
 			listeners.get(i).tableChanged(event);
 	}
-	
+
 	public void refresh(int pos) {
 		TableModelEvent event;
 		event = new TableModelEvent(this, pos, pos,
 			        TableModelEvent.ALL_COLUMNS, TableModelEvent.UPDATE);
-		
+
 		for (int i = 0; i < listeners.size(); i++)
 			listeners.get(i).tableChanged(event);
 	}
-	
+
 	public AudioFile getFileAt(int pos) {
 		return songs.get(pos);
 	}
@@ -278,20 +286,20 @@ public class PlayListTableModel implements TableModel {
 		setCurrentHeaders();
 		refresh();
 	}
-	
+
 	public void setArtistVisible(boolean artistVisible) {
 		this.artistVisible = artistVisible;
 		setCurrentHeaders();
 		refresh();
 	}
-	
+
 
 	public void setAlbumVisible(boolean albumVisible) {
 		this.albumVisible = albumVisible;
 		setCurrentHeaders();
 		refresh();
 	}
-	
+
 	public boolean isEmpty() {
 		return songs.isEmpty();
 	}
@@ -302,6 +310,9 @@ public class PlayListTableModel implements TableModel {
 
 	public boolean isArtistVisible() {
 		return artistVisible;
+	}
+	public boolean isLocationVisible() {
+		return locationVisible;
 	}
 
 	public void setGenreVisible(boolean genreVisible) {
@@ -317,5 +328,5 @@ public class PlayListTableModel implements TableModel {
 	public boolean isTrackVisible() {
 		return trackVisible;
 	}
-	
+
 }
