@@ -329,4 +329,9 @@ public class PlayListTableModel implements TableModel {
 		return trackVisible;
 	}
 
+	public boolean isDurationVisible() {
+		return locationVisible;
+	}
+
+
 }
